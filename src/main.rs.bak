@@ -1,0 +1,42 @@
+use std::fs;
+#[allow(unused_imports)]
+use std::io::{self, Write};
+//use std::process;
+
+fn find_type(args: &str) {
+    println!("{}", args);
+    match args {
+        "exit" | "echo" | "type" => println!("{} is a shell builtin", args),
+        _ => {
+            let path_env = std::env::var("PATH").unwrap();
+            let paths: Vec<&str> = path_env.split(':').collect();
+            for path in &paths {
+                if fs::metadata(format!("{}/{}", path, args)).is_ok() {
+                    println!("{} is {}/{}", args, path, args);
+                    return;
+                }
+            }
+            println!("{} not found", args)
+        }
+    }
+}
+
+fn main() {
+    loop {
+        print!("$ ");
+        io::stdout().flush().unwrap();
+        let stdin = io::stdin();
+        let mut input = String::new();
+        stdin.read_line(&mut input).unwrap();
+        let split: Vec<&str> = input.trim().split(' ').collect();
+        match split[..] {
+            ["type", arg] => find_type(arg),
+            ["exit", ..] => {
+                println!("exited with code {}", split[1]);
+                break;
+            }
+            ["echo", ..] => println!("{}", split[1..].join(" ")),
+            _ => println!("{}: command not found", input.trim()),
+        }
+    }
+}
