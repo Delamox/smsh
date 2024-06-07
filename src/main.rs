@@ -1,9 +1,6 @@
 #[allow(unused_imports)]
 use std::fs;
-use std::{
-    io::{self, Write},
-    string,
-};
+use std::io::{self, Write};
 
 fn find_command(split: Vec<&str>, istype: bool) {
     let cmd: &str = if istype { split[1] } else { split[0] };
