@@ -1,13 +1,16 @@
 #[allow(unused_imports)]
 use std::fs;
-use std::io::{self, Write};
+use std::{
+    io::{self, Write},
+    string,
+};
 
 fn find_command(split: Vec<&str>, istype: bool) {
-    let command: &str = if istype { split[1] } else { split[0] };
+    let cmd: &str = if istype { split[1] } else { split[0] };
     if istype {
-        match command {
+        match cmd {
             "echo" | "exit" | "type" | "pwd" | "cd" => {
-                println!("{} is a shell builtin", command);
+                println!("{} is a shell builtin", cmd);
                 return;
             }
             _ => (),
@@ -16,13 +19,13 @@ fn find_command(split: Vec<&str>, istype: bool) {
     let path_env = std::env::var("PATH").unwrap();
     let paths: Vec<&str> = path_env.split(':').collect();
     for path in &paths {
-        if fs::metadata(format!("{}/{}", path, command)).is_ok() {
+        if fs::metadata(format!("{}/{}", path, cmd)).is_ok() {
             match istype {
                 true => {
-                    println!("{} is {}/{}", command, path, command);
+                    println!("{} is {}/{}", cmd, path, cmd);
                 }
                 false => {
-                    let executable = format!("{path}/{command}");
+                    let executable = format!("{path}/{cmd}");
                     run_program(&executable, &split[1..])
                 }
             }
@@ -30,9 +33,9 @@ fn find_command(split: Vec<&str>, istype: bool) {
         }
     }
     if istype {
-        println!("{} not found", command)
+        println!("{} not found", cmd)
     } else {
-        println!("{}: command not found", command)
+        println!("{}: command not found", cmd)
     }
 }
 
@@ -52,14 +55,13 @@ fn change_directory(dir: &str) {
     } else {
         dir.to_string()
     };
-    let confdir = match fs::canonicalize(realdir) {
-        Ok(ok) => ok,
+    let path: String = match fs::canonicalize(realdir) {
+        Ok(ok) => ok.display().to_string(),
         Err(_error) => {
             println!("{}: No such file or directory", dir);
             return;
         }
     };
-    let path = confdir.display().to_string();
     if fs::metadata(&path).is_ok() {
         std::env::set_current_dir(&path).expect("error");
     } else {
@@ -69,7 +71,8 @@ fn change_directory(dir: &str) {
 
 fn main() {
     loop {
-        print!("$ ");
+        let wd: String = std::env::current_dir().unwrap().display().to_string();
+        print!("[{}]$ ", wd);
         io::stdout().flush().unwrap();
         let stdin = io::stdin();
         let mut input = String::new();
@@ -84,6 +87,10 @@ fn main() {
             ["exit", ..] => break,
             ["cd", ..] => {
                 if split.len() > 1 {
+                    if split.len() > 2 {
+                        println!("cd: Too many arguments");
+                        return;
+                    }
                     change_directory(split[1].trim())
                 }
             }
