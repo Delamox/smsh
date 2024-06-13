@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use std::fs;
 use std::io::{self, Write};
 const FNF: &str = "No such file or directory";
@@ -16,7 +15,7 @@ fn find_command(split: Vec<&str>, istype: bool) {
     }
     let path_env = std::env::var("PATH").unwrap();
     let paths: Vec<&str> = path_env.split(':').collect();
-    for path in &paths {
+    for path in paths {
         if fs::metadata(format!("{}/{}", path, cmd)).is_ok() {
             if istype {
                 println!("{} is {}/{}", cmd, path, cmd)
@@ -27,10 +26,9 @@ fn find_command(split: Vec<&str>, istype: bool) {
             return;
         }
     }
-    if istype {
-        println!("{} not found", cmd)
-    } else {
-        println!("{}: command not found", cmd)
+    match istype {
+        true => println!("{} not found", cmd),
+        false => println!("{}: command not found", cmd),
     }
 }
 
@@ -44,22 +42,18 @@ fn run_program(program: &str, args: &[&str]) {
 }
 
 fn change_directory(dir: &str) {
-    let realdir = if dir.starts_with('~') {
-        str::replace(dir, "~", std::env::var("HOME").unwrap().as_str())
-    } else {
-        dir.to_string()
+    let realdir = match dir.starts_with('~') {
+        true => str::replace(dir, "~", std::env::var("HOME").unwrap().as_str()),
+        false => dir.to_string(),
     };
-    let path: String = match fs::canonicalize(realdir) {
-        Ok(ok) => ok.display().to_string(),
-        Err(_) => {
-            println!("{}: {}", dir, FNF);
-            return;
-        }
+    let Ok(ok) = fs::canonicalize(realdir) else {
+        println!("{}: {}", dir, FNF);
+        return;
     };
-    if fs::metadata(&path).is_ok() {
-        std::env::set_current_dir(&path).expect("error");
-    } else {
-        println!("{}: {}", &path, FNF)
+    let path: String = ok.display().to_string();
+    match fs::metadata(&path).is_ok() {
+        true => std::env::set_current_dir(&path).expect("error"),
+        false => println!("{}: {}", &path, FNF),
     }
 }
 
@@ -76,7 +70,7 @@ fn main() {
         match split[..] {
             ["echo", ..] => {
                 if split.len() > 1 {
-                    println!("{}", split[1..].join(" "));
+                    println!("{}", split[1..].join(" "))
                 }
             }
             ["exit", ..] => break,
