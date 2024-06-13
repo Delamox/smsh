@@ -17,14 +17,11 @@ fn find_command(split: Vec<&str>, istype: bool) {
     let paths: Vec<&str> = path_env.split(':').collect();
     for path in &paths {
         if fs::metadata(format!("{}/{}", path, cmd)).is_ok() {
-            match istype {
-                true => {
-                    println!("{} is {}/{}", cmd, path, cmd);
-                }
-                false => {
-                    let executable = format!("{path}/{cmd}");
-                    run_program(&executable, &split[1..])
-                }
+            if istype {
+                println!("{} is {}/{}", cmd, path, cmd)
+            } else {
+                let exec = format!("{path}/{cmd}");
+                run_program(&exec, &split[1..])
             }
             return;
         }
@@ -69,7 +66,8 @@ fn change_directory(dir: &str) {
 fn main() {
     loop {
         let wd: String = std::env::current_dir().unwrap().display().to_string();
-        print!("[{}]$ ", wd);
+        let splitwd: &str = wd.split('/').next_back().unwrap();
+        print!("[{}]$ ", splitwd);
         io::stdout().flush().unwrap();
         let stdin = io::stdin();
         let mut input = String::new();
