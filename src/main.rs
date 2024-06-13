@@ -1,6 +1,7 @@
 #[allow(unused_imports)]
 use std::fs;
 use std::io::{self, Write};
+const FNF: &str = "No such file or directory";
 
 fn find_command(split: Vec<&str>, istype: bool) {
     let cmd: &str = if istype { split[1] } else { split[0] };
@@ -43,23 +44,22 @@ fn run_program(program: &str, args: &[&str]) {
 }
 
 fn change_directory(dir: &str) {
-    let realdir = if dir.chars().next().unwrap() == '~' {
-        let changed = str::replace(dir, "~", std::env::var("HOME").unwrap().as_str());
-        changed
+    let realdir = if dir.starts_with('~') {
+        str::replace(dir, "~", std::env::var("HOME").unwrap().as_str())
     } else {
         dir.to_string()
     };
     let path: String = match fs::canonicalize(realdir) {
         Ok(ok) => ok.display().to_string(),
-        Err(_error) => {
-            println!("{}: No such file or directory", dir);
+        Err(_) => {
+            println!("{}: {}", dir, FNF);
             return;
         }
     };
     if fs::metadata(&path).is_ok() {
         std::env::set_current_dir(&path).expect("error");
     } else {
-        println!("{}: No such file or directory", &path)
+        println!("{}: {}", &path, FNF)
     }
 }
 
@@ -89,7 +89,7 @@ fn main() {
                     change_directory(split[1].trim())
                 }
             }
-            ["pwd", ..] => println!("{}", std::env::current_dir().unwrap().display().to_string()),
+            ["pwd", ..] => println!("{}", std::env::current_dir().unwrap().display()),
             ["type", ..] => find_command(split, true),
             _ => find_command(split, false),
         }
