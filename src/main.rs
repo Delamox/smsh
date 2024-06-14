@@ -1,6 +1,9 @@
 use std::fs;
 use std::io::{self, Write};
-const FNF: &str = "No such file or directory";
+const FILE_NOT_FOUND_ERR: &str = "No such file or directory";
+const PROCESS_SPAWN_ERR: &str = "Failed to spawn subprocess";
+const STDOUT_ERR: &str = "Failed to read stdout";
+const PATH_ERR: &str = "Failed to read HOME environment variable";
 
 fn find_command(split: Vec<&str>, istype: bool) {
     let cmd: &str = if istype { split[1] } else { split[0] };
@@ -13,7 +16,10 @@ fn find_command(split: Vec<&str>, istype: bool) {
             _ => (),
         }
     }
-    let path_env = std::env::var("PATH").unwrap();
+    let Ok(path_env) = std::env::var("PATH") else {
+        println!("{}", PATH_ERR);
+        return;
+    };
     let paths: Vec<&str> = path_env.split(':').collect();
     for path in paths {
         if fs::metadata(format!("{}/{}", path, cmd)).is_ok() {
@@ -33,11 +39,18 @@ fn find_command(split: Vec<&str>, istype: bool) {
 }
 
 fn run_program(program: &str, args: &[&str]) {
-    let process = std::process::Command::new(program)
-        .args(args)
-        .spawn()
-        .unwrap();
-    let stdout = String::from_utf8(process.wait_with_output().unwrap().stdout).unwrap();
+    let Ok(process) = std::process::Command::new(program).args(args).spawn() else {
+        println!("{}", PROCESS_SPAWN_ERR);
+        return;
+    };
+    let Ok(stdout) = process.wait_with_output() else {
+        println!("{}", STDOUT_ERR);
+        return;
+    };
+    let Ok(stdout) = String::from_utf8(stdout.stdout) else {
+        println!("{}", STDOUT_ERR);
+        return;
+    };
     print!("{}", stdout);
 }
 
@@ -46,14 +59,14 @@ fn change_directory(dir: &str) {
         true => str::replace(dir, "~", std::env::var("HOME").unwrap().as_str()),
         false => dir.to_string(),
     };
-    let Ok(ok) = fs::canonicalize(realdir) else {
-        println!("{}: {}", dir, FNF);
+    let Ok(canonicalized) = fs::canonicalize(realdir) else {
+        println!("{}: {}", dir, FILE_NOT_FOUND_ERR);
         return;
     };
-    let path: String = ok.display().to_string();
+    let path: String = canonicalized.display().to_string();
     match fs::metadata(&path).is_ok() {
         true => std::env::set_current_dir(&path).expect("error"),
-        false => println!("{}: {}", &path, FNF),
+        false => println!("{}: {}", &path, FILE_NOT_FOUND_ERR),
     }
 }
 
