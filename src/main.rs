@@ -4,6 +4,7 @@ const FILE_NOT_FOUND_ERR: &str = "No such file or directory";
 const PROCESS_SPAWN_ERR: &str = "Failed to spawn subprocess";
 const STDOUT_ERR: &str = "Failed to read stdout";
 const PATH_ERR: &str = "Failed to read HOME environment variable";
+const INPUT_ERR: &str = "Failed to read stdin";
 
 fn find_command(split: Vec<&str>, istype: bool) {
     let cmd: &str = if istype { split[1] } else { split[0] };
@@ -65,7 +66,7 @@ fn change_directory(dir: &str) {
     };
     let path: String = canonicalized.display().to_string();
     match fs::metadata(&path).is_ok() {
-        true => std::env::set_current_dir(&path).expect("error"),
+        true => std::env::set_current_dir(&path).unwrap(),
         false => println!("{}: {}", &path, FILE_NOT_FOUND_ERR),
     }
 }
@@ -78,7 +79,13 @@ fn main() {
         io::stdout().flush().unwrap();
         let stdin = io::stdin();
         let mut input = String::new();
-        stdin.read_line(&mut input).unwrap();
+        match stdin.read_line(&mut input) {
+            Ok(ok) => ok,
+            Err(_) => {
+                println!("{}", INPUT_ERR);
+                break;
+            }
+        };
         let split: Vec<&str> = input.trim().split(' ').collect();
         match split[..] {
             ["echo", ..] => {
